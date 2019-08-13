@@ -16,7 +16,6 @@ func sendData(conn *net.Conn, data []byte) (int, error) {
 			return n, err
 		}
 		n += tempN
-		fmt.Printf("in srvsend n is %d\n", n)
 	}
 	return n, nil
 }

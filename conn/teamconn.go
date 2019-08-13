@@ -32,11 +32,20 @@ func NewConnTeam(cConn *net.Conn) *ConnTeam {
 	return &ct
 }
 
-func (ct *ConnTeam) CloseConn() {
-	(*ct.CliConn).Close()
-	ct.CliStatus = -1
-	(*ct.SrvConn).Close()
-	ct.SrvStatus = -1
+func (ct *ConnTeam) CloseConn(who int) { // who 1 client, who 2 server
+	if who == 1 {
+		(*ct.CliConn).Close()
+		ct.CliStatus = -1
+		time.Sleep(100 * time.Millisecond)
+		(*ct.SrvConn).Close()
+		ct.SrvStatus = -1
+	} else {
+		(*ct.SrvConn).Close()
+		ct.SrvStatus = -1
+		time.Sleep(100 * time.Millisecond)
+		(*ct.CliConn).Close()
+		ct.CliStatus = -1
+	}
 }
 
 func (ct *ConnTeam) Run() {
@@ -70,7 +79,7 @@ func (ct *ConnTeam) dealSrv() {
 			} else {
 				fmt.Println("recv server data err", err)
 			}
-			ct.CloseConn()
+			ct.CloseConn(2)
 			return
 		}
 		ct.CliDataChan <- data
@@ -98,7 +107,7 @@ func (ct *ConnTeam) dealCli() {
 			} else {
 				fmt.Println("recv client data err", err)
 			}
-			ct.CloseConn()
+			ct.CloseConn(1)
 			return
 		}
 		ct.SrvDataChan <- data
