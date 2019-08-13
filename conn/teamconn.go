@@ -1,7 +1,10 @@
 package conn
 
 import (
+	"fmt"
+	"io"
 	"net"
+	"time"
 )
 
 type ConnTeam struct {
@@ -9,4 +12,95 @@ type ConnTeam struct {
 	SrvConn     *net.Conn
 	CliDataChan chan []byte
 	SrvDataChan chan []byte
+	CliStatus   int
+	SrvStatus   int
+}
+
+func NewConnTeam(cConn *net.Conn) *ConnTeam {
+	sConn := createMySQLConn()
+	if sConn == nil {
+		fmt.Println("connect to mysql error")
+		return nil
+	}
+	var ct ConnTeam
+	ct.CliConn = cConn
+	ct.SrvConn = sConn
+	ct.CliDataChan = make(chan []byte)
+	ct.SrvDataChan = make(chan []byte)
+	ct.CliStatus = 0
+	ct.SrvStatus = 0
+	return &ct
+}
+
+func (ct *ConnTeam) CloseConn() {
+	(*ct.CliConn).Close()
+	ct.CliStatus = -1
+	(*ct.SrvConn).Close()
+	ct.SrvStatus = -1
+}
+
+func (ct *ConnTeam) Run() {
+	go ct.dealSrv()
+	time.Sleep(100 * time.Millisecond)
+	go ct.dealCli()
+	for ct.CliStatus != -1 && ct.SrvStatus != -1 {
+		time.Sleep(1 * time.Second)
+	}
+
+}
+
+func (ct *ConnTeam) srvSend() {
+	for ct.SrvStatus != -1 {
+		data := <-ct.SrvDataChan
+		packLen := len(data)
+		n, err := sendData(ct.SrvConn, data)
+		if err != nil {
+			fmt.Printf("srvsend send %d less than %d\n", n, packLen)
+		}
+	}
+}
+
+func (ct *ConnTeam) dealSrv() {
+	go ct.srvSend()
+	for ct.SrvStatus != -1 {
+		data, _, err := recvData(ct.SrvConn)
+		if err != nil {
+			if err == io.EOF {
+				fmt.Println("server close, close connection")
+			} else {
+				fmt.Println("recv server data err", err)
+			}
+			ct.CloseConn()
+			return
+		}
+		ct.CliDataChan <- data
+	}
+}
+
+func (ct *ConnTeam) cliSend() {
+	for ct.CliStatus != 1 {
+		data := <-ct.CliDataChan
+		packLen := len(data)
+		n, err := sendData(ct.CliConn, data)
+		if err != nil {
+			fmt.Printf("clisend send %d less than %d\n", n, packLen)
+		}
+	}
+}
+
+func (ct *ConnTeam) dealCli() {
+	go ct.cliSend()
+	for ct.CliStatus != -1 {
+		data, _, err := recvData(ct.CliConn)
+		if err != nil {
+			if err == io.EOF {
+				fmt.Println("client close, close connection")
+			} else {
+				fmt.Println("recv client data err", err)
+			}
+			ct.CloseConn()
+			return
+		}
+		ct.SrvDataChan <- data
+	}
 }
