@@ -25,8 +25,8 @@ func NewConnTeam(cConn *net.Conn) *ConnTeam {
 	var ct ConnTeam
 	ct.CliConn = cConn
 	ct.SrvConn = sConn
-	ct.CliDataChan = make(chan []byte)
-	ct.SrvDataChan = make(chan []byte)
+	ct.CliDataChan = make(chan []byte, 10)
+	ct.SrvDataChan = make(chan []byte, 10)
 	ct.CliStatus = 0
 	ct.SrvStatus = 0
 	return &ct
