@@ -16,8 +16,9 @@ type ConnTeam struct {
 	SrvStatus   int
 }
 
-func NewConnTeam(cConn *net.Conn) *ConnTeam {
-	sConn := createMySQLConn()
+func NewConnTeam(cConn *net.Conn, myinfo *MySQLDBInfo) *ConnTeam {
+	dbinfo := myinfo.Master[0]
+	sConn := dbinfo.CreateMySQLConn()
 	if sConn == nil {
 		fmt.Println("connect to mysql error")
 		return nil
