@@ -103,7 +103,8 @@ func (adb *AmongDB) GetDBConf(key string) *conn.MySQLDBInfo {
 
 //func (adb *AmongDB) WatchServer(srvKey string) {
 func (adb *AmongDB) WatchServer(srv *server.Server) {
-	srvKey := fmt.Sprintf("%s/%s:%d", server.DBServerPath, srv.Host, srv.Port)
+	//srvKey := fmt.Sprintf("%s/%s:%d", server.DBServerPath, srv.Host, srv.Port)
+	srvKey := fmt.Sprintf("%s/%s:%d", server.ServerPath, srv.Host, srv.Port)
 	rch := (*adb.EC).Watch(context.Background(), srvKey, clientv3.WithPrefix(), clientv3.WithPrevKV())
 	for wresp := range rch {
 		for _, ev := range wresp.Events {

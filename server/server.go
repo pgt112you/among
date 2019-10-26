@@ -13,7 +13,7 @@ import (
 )
 
 var ServerPath string = "among/server"
-var DBServerPath string = "among/dbserver"
+//var DBServerPath string = "among/dbserver"
 
 type ServerInfo struct {
 	Host string `json:"host"`
