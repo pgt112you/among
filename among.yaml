@@ -1,1 +1,2 @@
 etcdaddr: ["http://localhost:2379"]
+localip: 127.0.0.1

@@ -5,7 +5,6 @@ import (
 	"net"
 
 	"github.com/pgt112you/among/config"
-	"github.com/pgt112you/among/conn"
 	"github.com/pgt112you/among/db"
 )
 
@@ -20,30 +19,32 @@ func main() {
 		fmt.Println("create db object err", err)
 		return
 	}
-	/////////// for test //////////////
-	key := "127.0.0.1:13307"
-	dbconf := dbobj.GetDBConf(key)
-	if dbconf == nil {
-		fmt.Println("get db conf err")
+	allSrv := dbobj.GetAllServer()
+	if allSrv == nil {
+		fmt.Println("get all server err", err)
 		return
 	}
-	////////// for test end ///////////
+	fmt.Printf("all server is %v\n", allSrv)
 
-	ln, err := net.Listen("tcp", ":9090")
+	for _, srv := range allSrv {
+		dbKey := (*srv).GetDBPath()
+		dbconf := dbobj.GetDBConf(dbKey)
+		if dbconf == nil {
+			fmt.Printf("get db %s conf err\n", dbKey)
+			continue
+		}
+		go (*srv).RunServer(dbconf)
+	}
+
+	ln, err := net.Listen("tcp", ":9080")
 	if err != nil {
 		// handle error
 	}
 	for {
-		cConn, err := ln.Accept()
+		_, err := ln.Accept()
 		if err != nil {
 			// handle error
 			continue
 		}
-		ct := conn.NewConnTeam(&cConn, dbconf)
-		if ct == nil {
-			fmt.Println("new connteam err")
-			continue
-		}
-		go ct.Run()
 	}
 }

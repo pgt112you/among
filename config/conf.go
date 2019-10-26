@@ -8,6 +8,7 @@ import (
 
 type AmongConfig struct {
 	ETCDAddr []string `yaml:"etcdaddr"`
+	LocalIP  string   `yaml:"localip,omitempty"`
 }
 
 func NewAmongConfig(path string) *AmongConfig {

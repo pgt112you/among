@@ -20,7 +20,7 @@ type MySQLDBInfo struct {
 	SlaveMode  int      `json:"slavemode"`
 }
 
-func (dbi DBInfo) CreateMySQLConn() *net.Conn {
+func (dbi *DBInfo) CreateConn() *net.Conn {
 	myaddr := fmt.Sprintf("%s:%d", dbi.Host, dbi.Port)
 	conn, err := net.Dial("tcp", myaddr)
 	if err != nil {
@@ -28,4 +28,8 @@ func (dbi DBInfo) CreateMySQLConn() *net.Conn {
 		return nil
 	}
 	return &conn
+}
+
+func (mdbi *MySQLDBInfo) GetLinkBackEnd() BackEndPoint {
+	return &mdbi.Master[0]
 }
