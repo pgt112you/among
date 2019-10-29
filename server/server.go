@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 
@@ -8,11 +9,12 @@ import (
 	"github.com/pgt112you/among/conn"
 	//"github.com/pgt112you/among/db"
 
-	//"github.com/coreos/etcd/mvcc/mvccpb"
 	"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/mvcc/mvccpb"
 )
 
 var ServerPath string = "among/server"
+
 //var DBServerPath string = "among/dbserver"
 
 type ServerInfo struct {
@@ -58,12 +60,13 @@ func (srv Server) WatchDBServer() {
 			fmt.Printf("%s:%d get from srv ev err\n", srv.Host, srv.Port)
 			continue
 		}
-		if ev.Type == "PUT" {
-			if ev.Kv.Value == ev.PrevKv.Value {
+		if ev.Type == mvccpb.PUT {
+			if bytes.Compare(ev.Kv.Value, ev.PrevKv.Value) == 0 {
+				//if ev.Kv.Value == ev.PrevKv.Value {
 				continue
 			}
 
-		} else if ev.Type == "DELETE" {
+		} else if ev.Type == mvccpb.DELETE {
 			fmt.Println("delete key ", ev.Kv.Key)
 		}
 	}

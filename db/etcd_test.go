@@ -1,13 +1,14 @@
-package main
+package db
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/pgt112you/among/db"
 	"github.com/pgt112you/among/config"
+	"github.com/pgt112you/among/db"
 )
 
-func main() {
+func TestMain(t *testing.T) {
 	ac := config.NewAmongConfig("../among.yaml")
 	if ac == nil {
 		fmt.Println("ac is nil")

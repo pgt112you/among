@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
@@ -34,7 +35,7 @@ func NewAmongDB(ac *config.AmongConfig) (*AmongDB, error) {
 	return adb, nil
 }
 
-func (adb *AmongDB) GetAllServer() []*server.Server {
+func (adb *AmongDB) GetAllServer() []*server.CommonServer {
 	//resp, err := (*adb.EC).Get(context.TODO(), "/among/dbserver")
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 	opts := clientv3.WithPrefix()
@@ -44,23 +45,34 @@ func (adb *AmongDB) GetAllServer() []*server.Server {
 		return nil
 	}
 	//srvs := make([]*server.Server, len(resp.Kvs))
-	fmt.Printf("resp.kvs len is %d\n", len(resp.Kvs))
-	srvs := make([]*server.Server, len(resp.Kvs))
-	fmt.Printf("all server is %v\n", srvs)
+	srvs := make([]*server.CommonServer, len(resp.Kvs))
 	for i, kv := range resp.Kvs {
-		fmt.Println(kv.Key, kv.Value)
-		var si server.ServerInfo
-		err = json.Unmarshal(kv.Value, &si)
-		if err != nil {
-			fmt.Printf("Unmarshal server info err %v\n", err)
-			return nil
+		fmt.Println(string(kv.Key), string(kv.Value))
+		keyStr := string(kv.Key)
+		re := regexp.MustCompile(`among/server/(\w+)/(.+)`)
+		reSrvInfo := re.FindAllStringSubmatch(keyStr, -1)
+		if len(reSrvInfo[0]) < 3 {
+			continue
 		}
-		srv := new(server.Server)
-		srv.ServerInfo = si
-		srv.EV = make(chan *clientv3.Event)
-		fmt.Printf("srv is %v\n", srv)
-		//srvs = append(srvs, srv)
-		srvs[i] = srv
+		sType := reSrvInfo[0][1]
+		sAddr := reSrvInfo[0][2]
+
+		fmt.Printf("stype is %s, saddr is %s\n", sType, sAddr)
+		switch sType {
+		case "MySQL":
+			var msi server.MySQLServerInfo
+			err := msi.Unmarshal(kv.Value)
+			if err != nil {
+				fmt.Println("unmarshal mysql serverinfo error")
+			}
+			srv := new(server.MySQLServer)
+			srv.EV = make(chan *clientv3.Event)
+			srvs[i] = srv
+
+		default:
+			fmt.Println("server type is error")
+			continue
+		}
 	}
 	fmt.Printf("all server is %v\n", srvs)
 	return srvs
@@ -109,8 +121,8 @@ func (adb *AmongDB) WatchServer(srv *server.Server) {
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
 			srv.EV <- ev
-			fmt.Printf("%s %q  %q\n", ev.Type, ev.Kv.Key, ev.Kv.Value)
-			fmt.Printf("%s %s\n", string(ev.PrevKv.Key), string(ev.PrevKv.Value))
+			fmt.Printf("now event %s %q  %q\n", ev.Type, ev.Kv.Key, ev.Kv.Value)
+			fmt.Printf("prev event %s %s\n", string(ev.PrevKv.Key), string(ev.PrevKv.Value))
 		}
 	}
 }
