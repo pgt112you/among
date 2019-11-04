@@ -8,15 +8,15 @@ import (
 )
 
 type ConnTeam struct {
-	CliConn     *net.Conn
-	SrvConn     *net.Conn
+	CliConn     net.Conn
+	SrvConn     net.Conn
 	CliDataChan chan []byte
 	SrvDataChan chan []byte
 	CliStatus   int
 	SrvStatus   int
 }
 
-func NewConnTeam(cConn *net.Conn, beinfo BackEndInfo) *ConnTeam {
+func NewConnTeam(cConn net.Conn, beinfo BackEndInfo) *ConnTeam {
 	dbinfo := beinfo.GetLinkBackEnd()
 	sConn := dbinfo.CreateConn()
 	if sConn == nil {
@@ -33,18 +33,27 @@ func NewConnTeam(cConn *net.Conn, beinfo BackEndInfo) *ConnTeam {
 	return &ct
 }
 
+func (ct *ConnTeam) Close() {
+	ct.CloseConn(2)
+}
+
 func (ct *ConnTeam) CloseConn(who int) { // who 1 client, who 2 server
 	if who == 1 {
-		(*ct.CliConn).Close()
+		//(*ct.CliConn).Close()
+		ct.CliConn.Close()
 		ct.CliStatus = -1
 		time.Sleep(100 * time.Millisecond)
-		(*ct.SrvConn).Close()
+		//(*ct.SrvConn).Close()
+		ct.SrvConn.Close()
 		ct.SrvStatus = -1
 	} else {
-		(*ct.SrvConn).Close()
+		fmt.Println("server close")
+		//(*ct.SrvConn).Close()
+		ct.SrvConn.Close()
 		ct.SrvStatus = -1
 		time.Sleep(100 * time.Millisecond)
-		(*ct.CliConn).Close()
+		//(*ct.CliConn).Close()
+		ct.CliConn.Close()
 		ct.CliStatus = -1
 	}
 }

@@ -44,7 +44,7 @@ func (srv Server) RunServer(dbconf conn.BackEndInfo) {
 			continue
 		}
 		fmt.Println("local addr is", cConn.LocalAddr().String())
-		ct := conn.NewConnTeam(&cConn, dbconf)
+		ct := conn.NewConnTeam(cConn, dbconf)
 		if ct == nil {
 			fmt.Println("new connteam err")
 			continue
