@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"regexp"
-	"time"
 
 	"net/http"
 	_ "net/http/pprof"
@@ -32,13 +31,16 @@ func main() {
 		fmt.Println("get all server err", err)
 		return
 	}
-	fmt.Printf("all server is %v\n", allSrvConf)
 
 	srvs := make(map[string]server.CommonServer)
 
 	for _, srvc := range allSrvConf {
 		// 防止重复的key加入到map中
-		srv := server.CreateSrv(srvc)
+		srv, err := server.CreateSrv(srvc)
+		if err != nil {
+			fmt.Println("create server error:", err)
+			continue
+		}
 		_, ok := srvs[srv.GetAddr()]
 		if ok {
 			fmt.Printf("%s server is  already existed", srv.GetAddr())
@@ -46,10 +48,6 @@ func main() {
 		}
 		srvs[srv.GetAddr()] = srv
 		go srv.Run()
-		time.Sleep(100 * time.Millisecond)
-		if !srv.CheckOk() {
-			delete(srvs, srv.GetAddr())
-		}
 	}
 
 	evchan := make(chan *clientv3.Event)
@@ -62,6 +60,7 @@ func main() {
 	go func() {
 		http.ListenAndServe("0.0.0.0:6666", nil) // 这里还需要import "net/http"
 	}()
+	fmt.Printf("=================%v\n", srvs)
 	for {
 		_, err := ln.Accept()
 		if err != nil {
@@ -79,24 +78,34 @@ func dealSrvConfChange(m map[string]server.CommonServer, ch chan *clientv3.Event
 			if ev.PrevKv != nil {
 				fmt.Printf("prev event %s %s\n", string(ev.PrevKv.Key), string(ev.PrevKv.Value))
 			}
-			fmt.Printf("%v %s\n", ev.Type, string(ev.Type))
 
 			re := regexp.MustCompile(`among/server/(\w+)/(.+)`)
-			fmt.Println(string(ev.Kv.Key))
 			res := re.FindAllStringSubmatch(string(ev.Kv.Key), -1)
 			fmt.Printf("==== %v\n", res)
 			if len(res[0]) < 3 {
 				continue
 			}
-			fmt.Printf("%v\n", m)
 			srv := m[res[0][2]]
-			fmt.Printf("%v\n", srv)
 
 			if ev.Type == db.PUTOP {
 				if ev.PrevKv != nil { // modify existed one
 					if res[0][1] == server.MySQLSTR {
 						mc := new(server.MySQLServerConf)
-						mc.Unmarshal(ev.Kv.Value)
+						err := mc.Unmarshal(ev.Kv.Value)
+						if err != nil {
+							fmt.Println("put op config error", err)
+							continue
+						}
+						if srv == nil {
+							fmt.Println("in put new one op, srv is nil")
+							continue
+						}
+
+						if srv.CompareConf(mc) { //这里还有一个问题是，以前是mysql srv然后端口没改，变成了redis srv，其实应该把srv delete了重新生成
+							fmt.Println("among db not changed")
+							continue
+						}
+
 						srv.SetSrvPort(mc.SrvPort)
 					}
 					go srv.Reload()
@@ -107,17 +116,19 @@ func dealSrvConfChange(m map[string]server.CommonServer, ch chan *clientv3.Event
 						fmt.Println("add new server conf error")
 						continue
 					}
-					srv := server.CreateSrv(srvc)
+					srv, err := server.CreateSrv(srvc)
+					if err != nil {
+						fmt.Println("create server error:", err)
+						continue
+					}
 					m[srv.GetAddr()] = srv
 					go srv.Run()
-					time.Sleep(100 * time.Millisecond)
-					if !srv.CheckOk() {
-						delete(m, srv.GetAddr())
-					}
 				}
-				//fmt.Printf("%v\n", *srv)
 			} else if ev.Type == db.DELOP {
-				fmt.Println("in delete op")
+				if srv == nil {
+					fmt.Println("in del op, srv is nil")
+					continue
+				}
 				go srv.Stop()
 				delete(m, res[0][2])
 			}

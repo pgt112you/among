@@ -115,20 +115,6 @@ func (adb *AmongDB) GetServerConf(srvType, addr string) server.CommonServerConf 
 	}
 }
 
-func (adb *AmongDB) GetAllDBConf() {
-	//resp, err := (*adb.EC).Get(context.TODO(), "/among/dbserver")
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
-	resp, err := (*adb.EC).Get(ctx, "127.0.0.1:13307")
-	if err != nil {
-		fmt.Println("get /among/dbserver error", err)
-		return
-	}
-	fmt.Printf("resp is %v\n", resp)
-	for _, kv := range resp.Kvs {
-		fmt.Println(kv.String())
-	}
-}
-
 func (adb *AmongDB) GetDBConf(key string) *conn.MySQLDBConf {
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 	resp, err := (*adb.EC).Get(ctx, key)

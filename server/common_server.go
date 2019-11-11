@@ -26,22 +26,33 @@ type CommonServer interface {
 	CheckOk() bool
 	GetAddr() string
 	SetSrvPort(int)
+	CompareConf(CommonServerConf) bool
 }
 
-func CreateSrv(srvConf CommonServerConf) CommonServer {
+func CreateSrv(srvConf CommonServerConf) (CommonServer, error) {
 	switch srvConf.GetType() {
 	case MySQL:
 		mc, ok := srvConf.(*MySQLServerConf)
 		if !ok {
-			return nil
+			return nil, fmt.Errorf("config type invalid")
 		}
-		return createMySQLServer(mc)
+		srv := createMySQLServer(mc)
+		if srv == nil {
+			return nil, fmt.Errorf("create mysql server error")
+		} else {
+			return srv, nil
+		}
 	default:
 		mc, ok := srvConf.(*MySQLServerConf)
 		if !ok {
-			return nil
+			return nil, fmt.Errorf("config type invalid")
 		}
-		return createMySQLServer(mc)
+		srv := createMySQLServer(mc)
+		if srv == nil {
+			return nil, fmt.Errorf("create mysql server error")
+		} else {
+			return srv, nil
+		}
 	}
 }
 

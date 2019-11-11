@@ -30,6 +30,17 @@ func createMySQLServer(conf *MySQLServerConf) *MySQLServer {
 	srv.MySQLServerConf = *conf
 	srv.EV = make(chan *clientv3.Event)
 	srv.mark = 1
+	if srv.Proto == "" {
+		srv.Proto = "tcp"
+	}
+	lnAddr := fmt.Sprintf("0.0.0.0:%d", srv.SrvPort)
+	ln, err := net.Listen(srv.Proto, lnAddr)
+	if err != nil {
+		fmt.Printf("listen %s err %v\n", lnAddr, err)
+		return nil
+		// handle error
+	}
+	srv.sln = ln
 	return srv
 }
 
@@ -37,15 +48,37 @@ func createMySQLServerConf() *MySQLServerConf {
 	return new(MySQLServerConf)
 }
 
+func CreateMySQLConf(srv *MySQLServer) *conn.SrvMySQLDBConf {
+	mc := conn.NewMySQLDBConf(srv.Host, srv.Port)
+	smc := conn.NewSrvMySQLDBConf(mc)
+	return smc
+}
+
 func (conf *MySQLServerConf) GetType() int {
 	return conf.Type
 }
 
 func (self *MySQLServerConf) Unmarshal(content []byte) error {
-	err := json.Unmarshal(content, &self)
-	fmt.Println("err is ", err)
-	fmt.Println(self.SrvPort)
+	//err := json.Unmarshal(content, &self)
+	err := json.Unmarshal(content, self)
 	return err
+}
+
+func (self *MySQLServer) CompareConf(dstC CommonServerConf) bool {
+	dst, ok := dstC.(*MySQLServerConf)
+	if !ok {
+		return false
+	}
+	if self.Host != dst.Host {
+		return false
+	}
+	if self.Port != dst.Port {
+		return false
+	}
+	if self.SrvPort != dst.SrvPort {
+		return false
+	}
+	return true
 }
 
 func (self *MySQLServer) SetSrvPort(port int) {
@@ -65,8 +98,8 @@ func (self *MySQLServer) CheckOk() bool {
 }
 
 func (self *MySQLServer) Stop() {
-	self.sln.Close()
 	self.mark = 1
+	self.sln.Close()
 	for _, ct := range self.cts {
 		ct.Close()
 	}
@@ -78,37 +111,22 @@ func (self *MySQLServer) Reload() {
 	go self.Run()
 }
 
-func CreateMySQLConf(srv *MySQLServer) *conn.SrvMySQLDBConf {
-	mc := conn.NewMySQLDBConf(srv.Host, srv.Port)
-	smc := conn.NewSrvMySQLDBConf(mc)
-	return smc
-}
-
 func (self *MySQLServer) Run() {
 	if self.mark != 1 {
 		fmt.Println("server status mark is not right")
-	}
-	if self.Proto == "" {
-		self.Proto = "tcp"
-	}
-	lnAddr := fmt.Sprintf("0.0.0.0:%d", self.SrvPort)
-	fmt.Println(lnAddr)
-	ln, err := net.Listen(self.Proto, lnAddr)
-	if err != nil {
-		fmt.Printf("listen %s err %v\n", lnAddr, err)
 		return
-		// handle error
 	}
-	fmt.Println("aaaaaaaaaa")
-	self.sln = ln
-	fmt.Println("bbbbbbbbbb")
 	self.mark = 2
 	for {
 		if self.mark != 2 {
 			break
 		}
-		cConn, err := ln.Accept()
+		cConn, err := self.sln.Accept()
 		if err != nil {
+			closeErr := fmt.Sprintf("accept tcp [::]:%d: use of closed network connection", self.SrvPort)
+			if err.Error() == closeErr {
+				fmt.Println("ln conn is closed >>>>>>>>>>>>>>>>>>>>>>>>>>>")
+			}
 			// handle error
 			continue
 		}
