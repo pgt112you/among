@@ -13,11 +13,16 @@ type MySQLDBConf struct {
 	Dbname   string `json:"dbname,omitempty"`
 }
 
-type SrvMySQLDBConf struct {
+type MySQLBackEndConf struct {
 	Master     []*MySQLDBConf `json:"master"`
 	Slave      []*MySQLDBConf `json:"slave,omitempty"`
 	MasterMode int            `json:"mastermode,omitempty"`
 	SlaveMode  int            `json:"slavemode,omitempty"`
+}
+
+type MySQLBackEnd struct {
+	MySQLBackEndConf
+	MasterConn []net.Conn
 }
 
 func NewMySQLDBConf(host string, port int) *MySQLDBConf {
@@ -27,23 +32,56 @@ func NewMySQLDBConf(host string, port int) *MySQLDBConf {
 	return mc
 }
 
-func NewSrvMySQLDBConf(mc *MySQLDBConf) *SrvMySQLDBConf {
-	smc := new(SrvMySQLDBConf)
-	smc.Master = append(smc.Master, mc)
-	return smc
+//func (self *MySQLDBConf) CreateConn() net.Conn {
+//	myaddr := fmt.Sprintf("%s:%d", self.Host, self.Port)
+//	conn, err := net.Dial("tcp", myaddr)
+//	if err != nil {
+//		fmt.Printf("connect to mysql %s error %s", myaddr, err)
+//		return nil
+//	}
+//	return conn
+//}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func NewMySQLBackEndConf(mc *MySQLDBConf) *MySQLBackEndConf {
+	mbec := new(MySQLBackEndConf)
+	mbec.Master = append(mbec.Master, mc)
+	return mbec
 }
 
-//func (self *SrvMySQLDBConf) GetLinkBackEnd() *MySQLDBConf {
-func (self *SrvMySQLDBConf) GetLinkBackEnd() BackEndPoint {
-	return self.Master[0]
+func createMySQLBackEnd(mbec *MySQLBackEndConf) *MySQLBackEnd {
+	mbe := new(MySQLBackEnd)
+	mbe.MasterConn = make([]net.Conn, 1)
+	return mbe
 }
 
-func (self *MySQLDBConf) CreateConn() net.Conn {
-	myaddr := fmt.Sprintf("%s:%d", self.Host, self.Port)
-	conn, err := net.Dial("tcp", myaddr)
+func (self *MySQLBackEndConf) GetType() ConfType {
+	return MySQL
+}
+
+func (self *MySQLBackEnd) CreateConn() error {
+	mc := self.Master[0]
+	addr := fmt.Sprintf("%s:%d", mc.Host, mc.Port)
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
-		fmt.Printf("connect to mysql %s error %s", myaddr, err)
-		return nil
+		fmt.Println("create mysql backend conn error", err)
+		return err
 	}
-	return conn
+	self.MasterConn = append(self.MasterConn, conn)
+	return nil
+}
+
+func (self *MySQLBackEnd) SendData(data []byte) (int, error) {
+	return sendData(self.MasterConn[0], data)
+}
+
+func (self *MySQLBackEnd) RecvData() ([]byte, int, error) {
+	return recvData(self.MasterConn[0])
+}
+
+func (self *MySQLBackEnd) Close() {
+	for _, conn := range self.MasterConn {
+		conn.Close()
+	}
 }

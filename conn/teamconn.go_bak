@@ -7,28 +7,25 @@ import (
 	"time"
 )
 
-
 type ConnTeam struct {
 	CliConn     net.Conn
-	SrvConn     BackEnd
+	SrvConn     net.Conn
 	CliDataChan chan []byte
 	SrvDataChan chan []byte
 	CliStatus   int
 	SrvStatus   int
 }
 
-func NewConnTeam(cConn net.Conn, bec BackEndConf) *ConnTeam {
-	be, err := createBackEnd(bec)
-	if err != nil {
-		return nil
-	}
-    err = be.CreateConn()
-	if err != nil {
+func NewConnTeam(cConn net.Conn, beinfo BackEndInfo) *ConnTeam {
+	dbinfo := beinfo.GetLinkBackEnd()
+	sConn := dbinfo.CreateConn()
+	if sConn == nil {
+		fmt.Println("connect to mysql error")
 		return nil
 	}
 	var ct ConnTeam
 	ct.CliConn = cConn
-	ct.SrvConn = be
+	ct.SrvConn = sConn
 	ct.CliDataChan = make(chan []byte, 10)
 	ct.SrvDataChan = make(chan []byte, 10)
 	ct.CliStatus = 0
@@ -75,7 +72,7 @@ func (ct *ConnTeam) srvSend() {
 	for ct.SrvStatus != -1 {
 		data := <-ct.SrvDataChan
 		packLen := len(data)
-		n, err := ct.SrvConn.SendData(data)
+		n, err := sendData(ct.SrvConn, data)
 		if err != nil {
 			fmt.Printf("srvsend send %d less than %d\n", n, packLen)
 		}
@@ -85,7 +82,7 @@ func (ct *ConnTeam) srvSend() {
 func (ct *ConnTeam) dealSrv() {
 	go ct.srvSend()
 	for ct.SrvStatus != -1 {
-		data, _, err := ct.SrvConn.RecvData()
+		data, _, err := recvData(ct.SrvConn)
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println("server close, close connection")

@@ -48,9 +48,9 @@ func createMySQLServerConf() *MySQLServerConf {
 	return new(MySQLServerConf)
 }
 
-func CreateMySQLConf(srv *MySQLServer) *conn.SrvMySQLDBConf {
+func CreateMySQLConf(srv *MySQLServer) *conn.MySQLBackEndConf {
 	mc := conn.NewMySQLDBConf(srv.Host, srv.Port)
-	smc := conn.NewSrvMySQLDBConf(mc)
+	smc := conn.NewMySQLBackEndConf(mc)
 	return smc
 }
 
@@ -63,6 +63,19 @@ func (self *MySQLServerConf) Unmarshal(content []byte) error {
 	err := json.Unmarshal(content, self)
 	return err
 }
+
+func (self *MySQLServerConf) GetBackConf() conn.BackEndConf {
+	//myc := new(conn.MySQLDBConf)
+	mbc := new(conn.MySQLBackEndConf)
+	mc := new(conn.MySQLDBConf)
+	mc.Host = self.Host
+	mc.Port = self.Port
+	mbc.Master = make([]*conn.MySQLDBConf, 1)
+	mbc.Master[0] = mc
+	return mbc
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func (self *MySQLServer) CompareConf(dstC CommonServerConf) bool {
 	dst, ok := dstC.(*MySQLServerConf)
@@ -131,8 +144,10 @@ func (self *MySQLServer) Run() {
 			continue
 		}
 		fmt.Println("local addr is", cConn.LocalAddr().String())
-		smc := CreateMySQLConf(self)
-		ct := conn.NewConnTeam(cConn, smc)
+		//smc := CreateMySQLConf(self)
+		//ct := conn.NewConnTeam(cConn, smc)
+		mbc := self.GetBackConf()
+		ct := conn.NewConnTeam(cConn, mbc)
 		if ct == nil {
 			fmt.Println("new connteam err")
 			continue

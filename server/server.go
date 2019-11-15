@@ -3,8 +3,6 @@ package server
 import (
 	"bytes"
 	"fmt"
-	"net"
-
 	//"github.com/pgt112you/among/config"
 	"github.com/pgt112you/among/conn"
 	//"github.com/pgt112you/among/db"
@@ -28,30 +26,30 @@ type Server struct {
 }
 
 //func (srv ServerInfo) RunServer(dbobj *db.AmongDB) {
-func (srv Server) RunServer(dbconf conn.BackEndInfo) {
-	lnAddr := fmt.Sprintf(":%d", srv.Port)
-	ln, err := net.Listen("tcp", lnAddr)
-	if err != nil {
-		fmt.Printf("listen %s err %v\n", lnAddr, err)
-		return
-		// handle error
-	}
-
-	for {
-		cConn, err := ln.Accept()
-		if err != nil {
-			// handle error
-			continue
-		}
-		fmt.Println("local addr is", cConn.LocalAddr().String())
-		ct := conn.NewConnTeam(cConn, dbconf)
-		if ct == nil {
-			fmt.Println("new connteam err")
-			continue
-		}
-		go ct.Run()
-	}
-}
+//func (srv Server) RunServer(dbconf conn.BackEndInfo) {
+//	lnAddr := fmt.Sprintf(":%d", srv.Port)
+//	ln, err := net.Listen("tcp", lnAddr)
+//	if err != nil {
+//		fmt.Printf("listen %s err %v\n", lnAddr, err)
+//		return
+//		// handle error
+//	}
+//
+//	for {
+//		cConn, err := ln.Accept()
+//		if err != nil {
+//			// handle error
+//			continue
+//		}
+//		fmt.Println("local addr is", cConn.LocalAddr().String())
+//		ct := conn.NewConnTeam(cConn, dbconf)
+//		if ct == nil {
+//			fmt.Println("new connteam err")
+//			continue
+//		}
+//		go ct.Run()
+//	}
+//}
 
 func (srv Server) WatchDBServer() {
 	for {
