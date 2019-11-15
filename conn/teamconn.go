@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-
 type ConnTeam struct {
 	CliConn     net.Conn
 	SrvConn     BackEnd
@@ -22,10 +21,12 @@ func NewConnTeam(cConn net.Conn, bec BackEndConf) *ConnTeam {
 	if err != nil {
 		return nil
 	}
-    err = be.CreateConn()
+	fmt.Println("in connteam before create conn")
+	err = be.CreateConn()
 	if err != nil {
 		return nil
 	}
+	fmt.Println("in connteam after create conn")
 	var ct ConnTeam
 	ct.CliConn = cConn
 	ct.SrvConn = be

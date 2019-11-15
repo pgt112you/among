@@ -64,7 +64,8 @@ func (self *MySQLServerConf) Unmarshal(content []byte) error {
 	return err
 }
 
-func (self *MySQLServerConf) GetBackConf() conn.BackEndConf {
+//func (self *MySQLServerConf) GetBackConf() conn.BackEndConf {
+func (self *MySQLServerConf) GetBackConf() *conn.MySQLBackEndConf {
 	//myc := new(conn.MySQLDBConf)
 	mbc := new(conn.MySQLBackEndConf)
 	mc := new(conn.MySQLDBConf)
@@ -72,6 +73,7 @@ func (self *MySQLServerConf) GetBackConf() conn.BackEndConf {
 	mc.Port = self.Port
 	mbc.Master = make([]*conn.MySQLDBConf, 1)
 	mbc.Master[0] = mc
+	fmt.Println(mbc)
 	return mbc
 }
 

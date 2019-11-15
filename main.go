@@ -60,7 +60,6 @@ func main() {
 	go func() {
 		http.ListenAndServe("0.0.0.0:6666", nil) // 这里还需要import "net/http"
 	}()
-	fmt.Printf("=================%v\n", srvs)
 	for {
 		_, err := ln.Accept()
 		if err != nil {
@@ -81,7 +80,6 @@ func dealSrvConfChange(m map[string]server.CommonServer, ch chan *clientv3.Event
 
 			re := regexp.MustCompile(`among/server/(\w+)/(.+)`)
 			res := re.FindAllStringSubmatch(string(ev.Kv.Key), -1)
-			fmt.Printf("==== %v\n", res)
 			if len(res[0]) < 3 {
 				continue
 			}
@@ -97,7 +95,10 @@ func dealSrvConfChange(m map[string]server.CommonServer, ch chan *clientv3.Event
 							continue
 						}
 						if srv == nil {
-							fmt.Println("in put new one op, srv is nil")
+							fmt.Println("in put new one op, srv is nil", res[0][2])
+							srvType := res[0][1]
+							createSrvRun(srvType, ev.Kv.Value, m)
+							fmt.Printf("m is %v\n", m)
 							continue
 						}
 
@@ -111,18 +112,7 @@ func dealSrvConfChange(m map[string]server.CommonServer, ch chan *clientv3.Event
 					go srv.Reload()
 				} else { // add new one
 					srvType := res[0][1]
-					srvc := server.CreateSrvConf(srvType, ev.Kv.Value)
-					if srvc == nil {
-						fmt.Println("add new server conf error")
-						continue
-					}
-					srv, err := server.CreateSrv(srvc)
-					if err != nil {
-						fmt.Println("create server error:", err)
-						continue
-					}
-					m[srv.GetAddr()] = srv
-					go srv.Run()
+					createSrvRun(srvType, ev.Kv.Value, m)
 				}
 			} else if ev.Type == db.DELOP {
 				if srv == nil {
@@ -134,4 +124,18 @@ func dealSrvConfChange(m map[string]server.CommonServer, ch chan *clientv3.Event
 			}
 		}
 	}
+}
+
+func createSrvRun(ty string, conf []byte, m map[string]server.CommonServer) {
+	srvc := server.CreateSrvConf(ty, conf)
+	if srvc == nil {
+		fmt.Println("add new server conf error")
+		return
+	}
+	srv, err := server.CreateSrv(srvc)
+	if err != nil {
+		return
+	}
+	m[srv.GetAddr()] = srv
+	go srv.Run()
 }

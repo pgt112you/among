@@ -32,18 +32,6 @@ func NewMySQLDBConf(host string, port int) *MySQLDBConf {
 	return mc
 }
 
-//func (self *MySQLDBConf) CreateConn() net.Conn {
-//	myaddr := fmt.Sprintf("%s:%d", self.Host, self.Port)
-//	conn, err := net.Dial("tcp", myaddr)
-//	if err != nil {
-//		fmt.Printf("connect to mysql %s error %s", myaddr, err)
-//		return nil
-//	}
-//	return conn
-//}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 func NewMySQLBackEndConf(mc *MySQLDBConf) *MySQLBackEndConf {
 	mbec := new(MySQLBackEndConf)
 	mbec.Master = append(mbec.Master, mc)
@@ -52,7 +40,8 @@ func NewMySQLBackEndConf(mc *MySQLDBConf) *MySQLBackEndConf {
 
 func createMySQLBackEnd(mbec *MySQLBackEndConf) *MySQLBackEnd {
 	mbe := new(MySQLBackEnd)
-	mbe.MasterConn = make([]net.Conn, 1)
+	mbe.MySQLBackEndConf = *mbec
+	//mbe.MasterConn = make([]net.Conn, 1)
 	return mbe
 }
 
