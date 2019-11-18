@@ -141,13 +141,14 @@ func (self *MySQLServer) Run() {
 			closeErr := fmt.Sprintf("accept tcp [::]:%d: use of closed network connection", self.SrvPort)
 			if err.Error() == closeErr {
 				fmt.Println("ln conn is closed >>>>>>>>>>>>>>>>>>>>>>>>>>>")
+				self.sln.Close()
+				self.mark = 1
+				break
 			}
 			// handle error
 			continue
 		}
 		fmt.Println("local addr is", cConn.LocalAddr().String())
-		//smc := CreateMySQLConf(self)
-		//ct := conn.NewConnTeam(cConn, smc)
 		mbc := self.GetBackConf()
 		ct := conn.NewConnTeam(cConn, mbc)
 		if ct == nil {
