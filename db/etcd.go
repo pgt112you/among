@@ -136,22 +136,8 @@ func (adb *AmongDB) GetDBConf(key string) *conn.MySQLDBConf {
 	return &myinfo
 }
 
-//func (adb *AmongDB) WatchServer(srvKey string) {
-func (adb *AmongDB) WatchServer(srv *server.Server) {
-	//srvKey := fmt.Sprintf("%s/%s:%d", server.DBServerPath, srv.Host, srv.Port)
-	srvKey := fmt.Sprintf("%s/%s:%d", server.ServerPath, srv.Host, srv.Port)
-	rch := (*adb.EC).Watch(context.Background(), srvKey, clientv3.WithPrefix(), clientv3.WithPrevKV())
-	for wresp := range rch {
-		for _, ev := range wresp.Events {
-			srv.EV <- ev
-			fmt.Printf("now event %s %q  %q\n", ev.Type, ev.Kv.Key, ev.Kv.Value)
-			//fmt.Printf("prev event %s %s\n", string(ev.PrevKv.Key), string(ev.PrevKv.Value))
-		}
-	}
-}
-
 func (adb *AmongDB) WatchAllServer(evchan chan *clientv3.Event) {
-	rch := (*adb.EC).Watch(context.Background(), server.ServerDBPath, clientv3.WithPrefix(), clientv3.WithPrevKV())
+	rch := (*adb.EC).Watch(context.Background(), server.ServerPath, clientv3.WithPrefix(), clientv3.WithPrevKV())
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
 			evchan <- ev

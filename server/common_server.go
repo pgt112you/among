@@ -12,7 +12,7 @@ const (
 	MySQLSTR = "MySQL"
 )
 
-const ServerDBPath = "among/server"
+const ServerPath = "among/server"
 
 type CommonServerConf interface {
 	Unmarshal([]byte) error
